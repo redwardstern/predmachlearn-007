@@ -1,0 +1,67 @@
+---
+title: "fitbit training"
+author: "R. Edward Stern"
+date: "2/22/2015"
+output: html_document
+---
+
+####Load Libraries and Data
+```{r, echo=TRUE}
+library(caret)
+library(rpart)
+library(data.table)
+library(randomForest)
+
+url_test <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+url_train <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+
+data <- fread(url_train, na.strings =c("NA","","#DIV/0!"))
+dtest <- fread(url_test, na.strings =c("NA","","#DIV/0!"))
+```
+
+####Process Data & Create training and test sets
+```{r, echo=TRUE}
+
+
+#remove non-predictive variables
+data[ ,c("V1", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window")] = NULL
+
+#remove NA columns
+data <- data[,which(colSums(is.na(data))==0), with=FALSE]
+
+
+#create y factors
+data$classe <- as.factor(data$classe)
+
+set.seed(68911)
+itrain <- createDataPartition(y=data$classe, p=0.6)
+train = data[itrain[[1]]]
+
+test = data[-itrain[[1]]]
+
+```
+
+#### Random Forest & Results
+```{r, echo=TRUE}
+fit <- randomForest(classe ~., data=train)
+pred <- predict(fit, test)
+confusionMatrix(pred, test$classe)
+
+```
+
+
+#### Test Cases
+```{r, echo=TRUE}
+answers <- predict(fit, dtest)
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(answers)
+
+```
